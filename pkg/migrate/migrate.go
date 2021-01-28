@@ -16,10 +16,13 @@ type MigrationManager struct {
 }
 
 func (m *MigrationManager) InitDb() error {
+	m.Logger.Debug("Preparing to initialized " + schemaVersionTableName + " table in target database")
 	err := m.Datastore.Init()
 	if err != nil {
+		m.Logger.Error("An error has occurred while trying to create migration table")
 		return err
 	}
+	m.Logger.Debug("Migration table created successfully")
 
 	return nil
 }
@@ -31,6 +34,16 @@ func (m *MigrationManager) CurrentVersion() (string, error) {
 	}
 
 	return currentVersion, nil
+}
+
+func (m *MigrationManager) LowestAvailableVersion() string {
+	version := m.SchemaVersions[0]
+	return version
+}
+
+func (m *MigrationManager) HighestAvailableVersion() string {
+	version := m.SchemaVersions[len(m.SchemaVersions)-1]
+	return version
 }
 
 func (m *MigrationManager) isKnownVersion(version string) bool {
@@ -121,6 +134,7 @@ func (m *MigrationManager) Up(targetVersion string) error {
 	}
 
 	if version == targetVersion {
+		m.Logger.Info("Reached target version " + targetVersion)
 		return nil
 	}
 
@@ -129,6 +143,7 @@ func (m *MigrationManager) Up(targetVersion string) error {
 		return err
 	}
 
+	m.Logger.Info("Beginning schema migration from version " + version + " to " + next.Version)
 	err = m.Datastore.MigrateSchema(next.Version, next.Up)
 	if err != nil {
 		return err
@@ -150,15 +165,18 @@ func (m *MigrationManager) Down(targetVersion string) error {
 	}
 
 	if version == targetVersion {
+		m.Logger.Info("Reached target version " + targetVersion)
 		return nil
 	}
 
+	down := m.SchemaVersionMap[version]
 	next, err := m.getNextStepDown()
 	if err != nil {
 		return err
 	}
 
-	err = m.Datastore.MigrateSchema(next.Version, next.Down)
+	m.Logger.Info("Beginning schema migration from version " + version + " to " + next.Version)
+	err = m.Datastore.MigrateSchema(next.Version, down.Down)
 	if err != nil {
 		return err
 	}
@@ -176,9 +194,11 @@ func (m *MigrationManager) RegisterMigrationPath(migrationPath MigrationPath) er
 	if !versionExists {
 		schema = NewSchemaVersion(migrationPath.Version)
 		m.addSchemaVersion(schema)
+		m.Logger.Debug("Schema for version " + schema.Version + " does not already exist, creating a new schema definition")
 	}
 
 	err := schema.SetAction(migrationPath.Action, migrationPath.Sql())
+	m.Logger.Debug("Registered action " + migrationPath.Action + " for schema version " + migrationPath.Version)
 	if err != nil {
 		return err
 	}

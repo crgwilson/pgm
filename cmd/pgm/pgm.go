@@ -18,11 +18,9 @@ Usage:
     pgm [flags] <command>
 
 Commands:
-    init                   Create the schema version table is present within the database
+    init                   Perform all first time setup necessary for this tool to work
     up                     Run all available sql scripts until the highest available version is reached
-    up [version]           Run all available sql scritps until the given version is reached
-    down                   Run all available sql scripts to completely revert all schema changes
-    down [version]         Run all available sql scripts to revert schema changes until the given version is reached
+    down                   Run all available sql scripts to completely revert all schema changes back to the first version
     version                Print the current schema version
 
 `
@@ -118,22 +116,20 @@ func main() {
 		}
 	case "up":
 		// Upgrade DB schema using the `up.sql` files we know about
-		err := migrator.Up("003")
+		highest := migrator.HighestAvailableVersion()
+		err := migrator.Up(highest)
 		if err != nil {
 			cliLogger.Error(fmt.Sprintf("%v", err))
 			os.Exit(7)
 		}
 	case "down":
 		// Downgrade DB schema using the `down.sql` files we know about
-		// err := migrator.Down("001")
-		// if err != nil {
-		// 	cliLogger.Error(fmt.Sprintf("%v", err))
-		// 	os.Exit(8)
-		// }
-	case "list":
-		// for _, version := range migrator.AllVersions() {
-		// 	cliLogger.Info(version)
-		// }
+		lowest := migrator.LowestAvailableVersion()
+		err := migrator.Down(lowest)
+		if err != nil {
+			cliLogger.Error(fmt.Sprintf("%v", err))
+			os.Exit(8)
+		}
 	case "version":
 		// Get the current version of DB schema we have deployed
 		version, err := migrator.CurrentVersion()

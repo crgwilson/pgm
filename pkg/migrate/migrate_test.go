@@ -78,6 +78,16 @@ func TestMigrations(t *testing.T) {
 		t.Errorf("got %v, want no error", err)
 	}
 
+	highest := testMigrator.HighestAvailableVersion()
+	if highest != "003" {
+		t.Errorf("got %q, want %q", highest, "003")
+	}
+
+	lowest := testMigrator.LowestAvailableVersion()
+	if lowest != "001" {
+		t.Errorf("got %q, want %q", lowest, "001")
+	}
+
 	next, err := testMigrator.getNextStepUp()
 	if err != nil {
 		t.Errorf("got %v, want no error", err)

@@ -67,8 +67,8 @@ func (s *SchemaMigrationStore) GetCurrentSchemaVersion() (string, error) {
 		return "", ErrDatabaseNotInitialized
 	}
 
-	query := "SELECT MAX(version) FROM %s WHERE migration_status='success'"
-	result := s.Db.QueryRow(fmt.Sprintf(query, s.TableName))
+	query := "SELECT version FROM %s WHERE id=(SELECT MAX(id) FROM %s)"
+	result := s.Db.QueryRow(fmt.Sprintf(query, s.TableName, s.TableName))
 
 	var currentVersion string
 	err := result.Scan(&currentVersion)
