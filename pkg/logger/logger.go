@@ -69,6 +69,7 @@ type CliLogger struct {
 }
 
 func (c CliLogger) log(message string, logLevelValue int) {
+	// TODO: it would be best if this were variadic
 	if c.LogLevel.Value >= logLevelValue {
 		c.Logger.Println(message)
 	}
